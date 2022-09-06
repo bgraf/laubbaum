@@ -164,6 +164,28 @@ func handleEvent(app *application, ev tcell.Event) {
 				state.selected = next
 			}
 
+		case tcell.KeyCtrlA:
+			curr := app.diagramView.selected
+
+			if curr.Parent != nil {
+				index, _ := curr.Parent.ChildIndex(curr)
+				if index > 0 {
+					p := curr.Parent
+					p.Children[index-1], p.Children[index] = p.Children[index], p.Children[index-1]
+				}
+			}
+
+		case tcell.KeyCtrlX:
+			curr := app.diagramView.selected
+
+			if curr.Parent != nil {
+				index, _ := curr.Parent.ChildIndex(curr)
+				if index+1 < len(curr.Parent.Children) {
+					p := curr.Parent
+					p.Children[index+1], p.Children[index] = p.Children[index], p.Children[index+1]
+				}
+			}
+
 		case tcell.KeyRune:
 			switch ev.Rune() {
 			case 'O':
@@ -215,11 +237,6 @@ func defaultModel() *model.Node {
 	root := &model.Node{
 		Text: "Topic",
 	}
-
-	root.Children = append(root.Children, &model.Node{
-		Text:   "hallo\nwelt",
-		Parent: root,
-	})
 
 	return root
 }
