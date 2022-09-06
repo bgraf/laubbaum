@@ -10,6 +10,38 @@ import (
 	"github.com/bgraf/laubbaum/model"
 )
 
+func main() {
+	fmt.Println("ok")
+
+	s, err := tcell.NewScreen()
+	if err != nil {
+		log.Fatalf("init: %+v", err)
+	}
+
+	if err := s.Init(); err != nil {
+		log.Fatalf("init: %+v", err)
+	}
+
+	mod := defaultModel()
+	mod.PropagateParent(nil)
+
+	app := &application{
+		screen:      s,
+		diagramView: newRenderState(),
+		root:        mod,
+	}
+
+	// Set default text style
+	s.SetStyle(defStyle)
+	s.Clear()
+
+	for {
+		drawApp(app)
+		ev := s.PollEvent()
+		handleEvent(app, ev)
+	}
+}
+
 var defStyle = tcell.StyleDefault.Background(tcell.ColorReset).Foreground(tcell.ColorReset)
 
 type application struct {
@@ -25,7 +57,7 @@ func drawApp(app *application) {
 	_, h := s.Size()
 	bc, br := 1, h/2
 
-	s.Clear()
+	s.Fill(' ', defStyle)
 	app.diagramView.Draw(s, app.root, bc, br)
 	if app.inputField != nil {
 		app.inputField.Draw(s)
@@ -35,10 +67,13 @@ func drawApp(app *application) {
 	s.Show()
 }
 
-func openInput(app *application, init string) {
+func openInput(app *application, init string, clear bool) {
 	w, _ := app.screen.Size()
 	app.inputField = NewInputField(w/2-20, 0)
-	app.inputField.buffer = []rune(init)
+	app.inputField.SetInitialText(init)
+	if clear {
+		app.inputField.Clear()
+	}
 }
 
 func quit(app *application) {
@@ -51,14 +86,14 @@ func handleEvent(app *application, ev tcell.Event) {
 	case *tcell.EventResize:
 		app.screen.Sync()
 	case *tcell.EventKey:
-		if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
+		if ev.Key() == tcell.KeyCtrlC {
 			quit(app)
 		}
 
 		if app.inputField != nil {
-			done := app.inputField.HandleEvent(ev)
-			app.diagramView.selected.SetText(string(app.inputField.buffer))
-			if done {
+			app.inputField.HandleEvent(ev)
+			app.diagramView.selected.SetText(app.inputField.String())
+			if app.inputField.IsDone() {
 				app.screen.ShowCursor(-1, -1)
 				app.inputField = nil
 			}
@@ -87,7 +122,7 @@ func handleEvent(app *application, ev tcell.Event) {
 				curr.Parent.Children = append(curr.Parent.Children, newChild)
 				state.selected = newChild
 
-				openInput(app, "")
+				openInput(app, "", true)
 			}
 
 		case tcell.KeyTab:
@@ -101,7 +136,7 @@ func handleEvent(app *application, ev tcell.Event) {
 			curr.Children = append(curr.Children, newChild)
 			state.selected = newChild
 
-			openInput(app, newChild.Text)
+			openInput(app, newChild.Text, true)
 
 		case tcell.KeyDelete:
 			state := app.diagramView
@@ -146,7 +181,7 @@ func handleEvent(app *application, ev tcell.Event) {
 					curr.Parent.InsertChild(newChild, index)
 					state.selected = newChild
 
-					openInput(app, "")
+					openInput(app, "", true)
 				}
 
 			case 'o':
@@ -164,52 +199,27 @@ func handleEvent(app *application, ev tcell.Event) {
 					curr.Parent.InsertChild(newChild, index+1)
 					state.selected = newChild
 
-					openInput(app, "")
+					openInput(app, "", true)
 				}
 
 			case 'a':
-				openInput(app, app.diagramView.selected.Text)
+				openInput(app, app.diagramView.selected.Text, false)
 			case 'c':
-				openInput(app, "")
+				openInput(app, app.diagramView.selected.Text, true)
 			}
 		}
 	}
 }
 
-func main() {
-	fmt.Println("ok")
-
-	s, err := tcell.NewScreen()
-	if err != nil {
-		log.Fatalf("init: %+v", err)
-	}
-
-	if err := s.Init(); err != nil {
-		log.Fatalf("init: %+v", err)
-	}
-
-	mod := defaultModel()
-	mod.PropagateParent(nil)
-
-	app := &application{
-		screen:      s,
-		diagramView: newRenderState(),
-		root:        mod,
-	}
-
-	// Set default text style
-	s.SetStyle(defStyle)
-	s.Clear()
-
-	for {
-		drawApp(app)
-		ev := s.PollEvent()
-		handleEvent(app, ev)
-	}
-}
-
 func defaultModel() *model.Node {
-	return &model.Node{
+	root := &model.Node{
 		Text: "Topic",
 	}
+
+	root.Children = append(root.Children, &model.Node{
+		Text:   "hallo\nwelt",
+		Parent: root,
+	})
+
+	return root
 }

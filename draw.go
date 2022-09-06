@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 
@@ -168,7 +169,11 @@ func DrawNode(s tcell.Screen, n *model.Node, col, row int, minWidth int, isSelec
 
 	DrawBox(s, col, row, w, h, defStyle)
 
-	drawText(s, col+2, row+1, col+w-2, row+1, tcell.StyleDefault, n.Text)
+	parts := strings.Split(n.Text, "\n")
+
+	for i, part := range parts {
+		drawText(s, col+2, row+1+i, col+w-2, row+1+i, tcell.StyleDefault, part)
+	}
 }
 
 func NodeSize(n *model.Node) (w, h int) {
@@ -211,37 +216,6 @@ func Drawf(s tcell.Screen, x1, y1 int, format string, args ...interface{}) {
 	for _, r := range text {
 		s.SetContent(col, row, r, nil, tcell.StyleDefault)
 		col++
-	}
-}
-
-func DrawConnector(s tcell.Screen, c1, r1, c2, r2 int) {
-	if r1 == r2 {
-		for c := c1; c < c2; c++ {
-			s.SetContent(c, r1, tcell.RuneHLine, nil, tcell.StyleDefault)
-		}
-
-		return
-	}
-
-	mid := (c1 + c2) / 2
-
-	for c := c1; c < mid; c++ {
-		s.SetContent(c, r1, tcell.RuneHLine, nil, tcell.StyleDefault)
-	}
-
-	for c := mid; c < c2; c++ {
-		s.SetContent(c, r2, tcell.RuneHLine, nil, tcell.StyleDefault)
-	}
-
-	if r1 > r2 {
-		r1, r2 = r2, r1
-	}
-
-	s.SetContent(mid, r1, '┐', nil, tcell.StyleDefault)
-	s.SetContent(mid, r2, '└', nil, tcell.StyleDefault)
-
-	for r := r1 + 1; r < r2; r++ {
-		s.SetContent(mid, r, '│', nil, tcell.StyleDefault)
 	}
 }
 
@@ -327,7 +301,7 @@ func DrawConnectors(s tcell.Screen, out Point, in []Point) {
 func drawText(s tcell.Screen, x1, y1, x2, y2 int, style tcell.Style, text string) {
 	row := y1
 	col := x1
-	for _, r := range []rune(text) {
+	for _, r := range text {
 		s.SetContent(col, row, r, nil, style)
 		col++
 		if col >= x2 {

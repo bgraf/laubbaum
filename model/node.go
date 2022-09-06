@@ -1,5 +1,7 @@
 package model
 
+import "strings"
+
 type Node struct {
 	Text     string
 	Children []*Node
@@ -15,7 +17,16 @@ func (n *Node) SetText(newText string) {
 }
 
 func (n *Node) InnerSize() (w, h int) {
-	return len(n.Text), 1
+	parts := strings.Split(n.Text, "\n")
+
+	maxLength := 0
+	for _, p := range parts {
+		l := len(p)
+		if l > maxLength {
+			maxLength = l
+		}
+	}
+	return maxLength, len(parts)
 }
 
 func (n *Node) PropagateParent(parent *Node) {
